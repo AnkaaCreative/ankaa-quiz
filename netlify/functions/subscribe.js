@@ -10,10 +10,12 @@ exports.handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ error: 'Email required' }) };
     }
 
+    const apiKey = process.env.FLODESK_API_KEY;
+
     const response = await fetch('https://api.flodesk.com/v1/subscribers', {
       method: 'POST',
       headers: {
-        'Authorization': 'Basic ' + Buffer.from(process.env.FLODESK_API_KEY + ':').toString('base64'),
+        'Authorization': 'Basic ' + Buffer.from(apiKey + ':').toString('base64'),
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -30,12 +32,16 @@ exports.handler = async (event) => {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': 'Content-Type'
       },
-      body: JSON.stringify({ success: true })
+      body: JSON.stringify({
+        success: response.ok,
+        status: response.status,
+        flodesk_response: data
+      })
     };
   } catch (error) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Subscription failed' })
+      body: JSON.stringify({ error: error.message })
     };
   }
 };
