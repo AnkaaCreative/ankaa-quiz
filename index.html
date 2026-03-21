@@ -515,13 +515,11 @@
     </div>
     <h2>Tu diagnóstico está listo</h2>
     <p>Déjame tu email y nombre para enviarte el resultado con recomendaciones personalizadas.</p>
-    <form class="quiz-email-form" name="quiz-leads" method="POST" data-netlify="true" onsubmit="return submitEmail(event)">
-      <input type="hidden" name="form-name" value="quiz-leads">
-      <input type="hidden" name="quiz-result" id="quizResultField" value="">
-      <input type="text" id="userName" name="name" placeholder="Tu nombre" autocomplete="given-name">
-      <input type="email" id="userEmail" name="email" placeholder="Tu email" autocomplete="email" required>
-      <button type="submit" class="quiz-email-submit" id="emailSubmit">Ver mi resultado</button>
-    </form>
+    <div class="quiz-email-form">
+      <input type="text" id="userName" placeholder="Tu nombre" autocomplete="given-name">
+      <input type="email" id="userEmail" placeholder="Tu email" autocomplete="email">
+      <button class="quiz-email-submit" id="emailSubmit" onclick="submitEmail()">Ver mi resultado</button>
+    </div>
     <button class="quiz-email-skip" onclick="skipEmail()">Prefiero no dejarlo</button>
   </div>
 
@@ -664,37 +662,28 @@ function showEmailCapture() {
   document.getElementById('userName').focus();
 }
 
-function submitEmail(e) {
-  e.preventDefault();
-
+function submitEmail() {
   var name = document.getElementById('userName').value.trim();
   var email = document.getElementById('userEmail').value.trim();
 
   if (!email || email.indexOf('@') === -1) {
     document.getElementById('userEmail').style.boxShadow = '0 0 0 2px #e74c3c';
     document.getElementById('userEmail').focus();
-    return false;
+    return;
   }
 
   var btn = document.getElementById('emailSubmit');
   btn.textContent = 'Enviando...';
   btn.disabled = true;
 
-  // Set quiz result in hidden field
-  document.getElementById('quizResultField').value = getResultKey();
-
-  // Submit to Netlify Forms
-  var formData = new FormData(document.querySelector('form[name="quiz-leads"]'));
-
-  fetch('/', {
+  // Submit to Flodesk via Netlify Function
+  fetch('/.netlify/functions/subscribe', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams(formData).toString()
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email, name: name })
   })
   .then(function() { showResult(); })
   .catch(function() { showResult(); });
-
-  return false;
 }
 
 function skipEmail() {
