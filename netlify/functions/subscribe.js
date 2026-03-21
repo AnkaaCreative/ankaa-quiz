@@ -24,6 +24,21 @@ exports.handler = async (event) => {
     }
 
     const apiKey = (process.env.FLODESK_API_KEY || '').trim();
+
+    // Debug: return key info (temporary)
+    if (email === 'debug@test.com') {
+      return {
+        statusCode: 200,
+        headers: { 'Access-Control-Allow-Origin': '*' },
+        body: JSON.stringify({
+          keyLength: apiKey.length,
+          keyStart: apiKey.substring(0, 10),
+          keyEnd: apiKey.substring(apiKey.length - 6),
+          allEnvKeys: Object.keys(process.env).filter(k => k.includes('FLODESK'))
+        })
+      };
+    }
+
     const auth = Buffer.from(apiKey + ':').toString('base64');
 
     const response = await fetch('https://api.flodesk.com/v1/subscribers', {
