@@ -722,7 +722,32 @@ function restartQuiz() {
   document.getElementById('emailSubmit').textContent = 'Ver mi resultado';
   document.getElementById('emailSubmit').disabled = false;
   document.getElementById('ankaaQuiz').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  notifyHeight();
 }
+
+// Auto-resize iframe
+function notifyHeight() {
+  setTimeout(function() {
+    var h = document.body.scrollHeight;
+    window.parent.postMessage({ type: 'ankaa-quiz-height', height: h }, '*');
+  }, 100);
+}
+
+// Send height on every screen change
+var _startQuiz = startQuiz;
+startQuiz = function() { _startQuiz(); notifyHeight(); };
+
+var _showQuestion = showQuestion;
+showQuestion = function(i) { _showQuestion(i); notifyHeight(); };
+
+var _showEmailCapture = showEmailCapture;
+showEmailCapture = function() { _showEmailCapture(); notifyHeight(); };
+
+var _showResult = showResult;
+showResult = function() { _showResult(); notifyHeight(); };
+
+window.addEventListener('load', notifyHeight);
+window.addEventListener('resize', notifyHeight);
 </script>
 
 </body>
