@@ -57,16 +57,52 @@ exports.handler = async (event) => {
       body: JSON.stringify(flodeskBody)
     });
 
-    // If segment ID exists, add subscriber to it
-    if (segmentId && flodeskResponse.ok) {
-      await fetch(`https://api.flodesk.com/v1/subscribers/${encodeURIComponent(email)}/segments`, {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Basic ' + auth,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ segment_ids: [segmentId] })
-      }).catch(() => {});
+    const flodeskData = await flodeskResponse.json().catch(() => ({}));
+
+    if (!flodeskResponse.ok) {
+      console.error('Flodesk subscriber error', flodeskResponse.status, flodeskData);
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ success: false, step: 'subscriber' })
+      };
+    }
+
+    const subscriberId = flodeskData.id || (flodeskData.data && flodeskData.data.id);
+
+    const debug = {
+      subscriberKeys: Object.keys(flodeskData || {}),
+      subscriberId: subscriberId || null,
+      segmentIdPresent: !!segmentId,
+      quizResultKey: quizResult || null,
+      envVarName: 'FLODESK_SEGMENT_' + (quizResult || '').toUpperCase(),
+      segmentStatus: null,
+      segmentBody: null
+    };
+
+    if (segmentId && subscriberId) {
+      const segmentResponse = await fetch(
+        `https://api.flodesk.com/v1/subscribers/${subscriberId}/segments`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Basic ' + auth,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ segment_ids: [segmentId] })
+        }
+      );
+
+      debug.segmentStatus = segmentResponse.status;
+      debug.segmentBody = (await segmentResponse.text().catch(() => '')).slice(0, 500);
+
+      if (!segmentResponse.ok) {
+        console.error('Flodesk segment error', segmentResponse.status, debug.segmentBody);
+      }
+    } else if (!subscriberId) {
+      console.error('Flodesk returned no subscriber id', flodeskData);
+    } else if (!segmentId) {
+      console.error('Missing FLODESK_SEGMENT_ env var for quizResult', quizResult);
     }
 
     // 2. Save to Supabase if configured
@@ -97,7 +133,7 @@ exports.handler = async (event) => {
     return {
       statusCode: flodeskResponse.ok ? 200 : 400,
       headers: corsHeaders,
-      body: JSON.stringify({ success: flodeskResponse.ok })
+      body: JSON.stringify({ success: flodeskResponse.ok, debug })
     };
   } catch (error) {
     return {
